@@ -1,0 +1,15 @@
+html {
+background-color: tan;
+}
+
+body {
+font-family: Arial, Helvetica, sans-serif;
+}
+
+p {
+color: brown;
+}
+
+.gauges {
+    display:flex;
+}

@@ -1,0 +1,38 @@
+<html lang="en-US">
+    <head>
+        <title>Python Weather</title>
+        <meta content="10" charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="static/theme.css">
+        <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+        <script src="static/wapp.js"></script>
+
+    </head>
+    <body>
+        <div id="weather_data"></div>
+            <p>Temperature = <span id="temperature"></span>F
+            <br /><span style="padding-left:20px"></span> Min Temp = <span id="temp_low"></span>F, Max Temp = <span id="temp_hi"></span>F
+            <p>Pressure = <span id="pressure"></span> mbar
+            <p>Humidity = <span id="humidity"></span>%
+            <p>Rainfall = <span id="rainfall"></span> in
+            <p>Windspeed = <span id="windspeed"></span> mph
+            <br /><span style="padding-left:20px"></span> 5min max Speed = <span id="wind5max"></span> mph
+            <p>Direction = <span id="direction"></span> degrees
+            <p>Battery = <span id="battery"></span>V
+            <p>Radio Signal Strength = <span id="rssi"></span>dB
+    </body>
+    <div class="gauges">
+        <div id="tempGuage"></div>
+        <div id="humidityGuage"></div>
+        <div id="pressureGauge"></div>
+        <div id="windspeedGauge"></div>
+        <canvas id="directionGuage"></canvas>
+    </div>
+
+    <div id="battery_history"></div>
+    <div id="pressure_history"></div>
+    <div id="temperature_history"></div>
+    <div id="rainfall_history"></div>
+</html>
