@@ -19,9 +19,10 @@ function updateUI() {
     if (!data) return;
 
         // update text information
-    document.getElementById("temperature").innerHTML = data.temperature.toFixed(1);
-    document.getElementById("temp_low").innerHTML = data.min_temp.toFixed(1);
-    document.getElementById("temp_hi").innerHTML = data.max_temp.toFixed(1);
+    document.getElementById("date").innerHTML = data.date;
+    document.getElementById("temperature").innerHTML = (32+data.temperature*1.8).toFixed(1);
+    document.getElementById("temp_low").innerHTML = (32+data.min_temp*1.8).toFixed(1);
+    document.getElementById("temp_hi").innerHTML = (32+data.max_temp*1.8).toFixed(1);
     document.getElementById("pressure").innerHTML = data.pressure.toFixed(2);
     document.getElementById("humidity").innerHTML = data.humidity.toFixed(0);
     document.getElementById("rainfall").innerHTML = data.rainfall.toFixed(2);
@@ -32,7 +33,7 @@ function updateUI() {
     document.getElementById("rssi").innerHTML = data.rssi.toFixed(1);
 
         // update guages
-    gaugeUpdate('temperature', data.temperature.toFixed(0));
+    gaugeUpdate('temperature', (32+data.temperature*1.8).toFixed(0));
     gaugeUpdate('humidity', data.humidity.toFixed(0));
     gaugeUpdate('pressure', data.pressure.toFixed(0));
     gaugeUpdate('windspeed', data.windspeed.toFixed(0));
