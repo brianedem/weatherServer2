@@ -1,14 +1,31 @@
+import configparser
 from flask import Flask, send_file
 import influxdb_client
-import configparser
 
-# TODO - move to a config file
-org = 'Home'
-token = 'TCn6tMjTwlzRIVGrkmTlFx3Sr6TBLqsWQBEXk_5X0L-KIVfCY6LHQVm5vzzMe-2JIu3PAaL_BSzI-RJs8dl6RQ=='
+# obtain configuration options
+local_config_file = 'wserver.ini'
+system_config_file = '/usr/local/etc/wserver.ini'
 
-url = 'http://localhost:8086'
+config = configparser.ConfigParser()
+for config_file in (local_config_file, system_config_file):
+    if file_read := config.read(config_file):
+        break
+else:
+    exit('Error: missing configuration file')
 
 # influxdb setup
+section_name = 'INFLUXDB'
+try:
+    influx_config = config[section_name]
+except KeyError:
+    exit(f'[{section_name}] section of {config_file} missing')
+try:
+    token = influx_config['token']
+    org = influx_config['organization']
+    url = influx_config['url']
+except KeyError as a:
+    exit(f'Unable to fine {a} in [{section_name}] section of {config_file}')
+
 client = influxdb_client.InfluxDBClient(
     url=url,
     token=token,
@@ -36,7 +53,7 @@ def current_weather():
 
     resultL = query_api.query(org=org, query=query)
 
-    values = {'date': resultL[0].records[0].get_time().strftime("%Y-%m-%d %H:%M:%S")}
+    values = {'date': resultL[0].records[0].get_time().astimezone().strftime("%Y-%m-%d %H:%M")}
     for table in resultL:
         for record in table.records:
             values[record.get_field()] = record.get_value()
@@ -44,7 +61,7 @@ def current_weather():
     # TODO remap gust to wind5max or perform MAX query on rapid_wind
     values['wind5max'] = values.pop('gust')
 
-#   print(values)
+    #print(values)
 
     ##############################################################
     # SELECT * FROM WindData ORDER BY date DESC LIMIT 1;
@@ -145,7 +162,7 @@ def week_data():
 
     for rows in zip(*table_subset):
         row_timestamp = rows[0].get_time()
-        data['dates'].append(row_timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+        data['dates'].append(row_timestamp.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
         for row in rows:
             data[name_remap[row.get_field()]].append(row.get_value())
             if row.get_time() != row_timestamp:
