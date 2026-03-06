@@ -1,5 +1,5 @@
 import configparser
-from flask import Flask, send_file
+from flask import Flask, send_file, abort
 import influxdb_client
 
 # obtain configuration options
@@ -39,6 +39,10 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return send_file('static/index.html')
+
+@app.route('/debug.html')   # this was added to debug a new version of wapp.js
+def index2():
+    return send_file('static/debug.html')
 
 @app.route("/weather.data")
 def current_weather():
@@ -132,38 +136,77 @@ def current_weather():
 
     return values
 
+@app.route("/week.<measurement>")
+def week_data2(measurement):
+#   Target = collections.namedtuple('Target', ['output', 'function'])
+    measurement_functions = {
+        'temperature': 'mean',
+        'pressure': 'mean',
+        'rainfall': 'sum',
+        'battery': 'mean',
+    }
+    # make sure the measurement is supported
+    if measurement not in measurement_functions:
+        abort(404)
+
+    query = f'from(bucket:"weather")\
+    |> range(start: -7d)\
+    |> filter(fn:(r) => r._measurement == "observation" and r._field == "{measurement}")\
+    |> aggregateWindow(every: 15m, fn: {measurement_functions[measurement]})'
+
+    tables = query_api.query(org=org, query=query)
+
+    data = []
+    for record in tables[0]:
+        measurement_timestamp = record.get_time()
+        measurement_field = record.get_field()
+        measurement_value = record.get_value()
+        data.append([measurement_timestamp.astimezone().strftime("%Y-%m-%d %H:%M:%S"), measurement_value])
+    return data
+
 @app.route("/week.data")
 def week_data():
     ############## /week.data #################################
     ##############################################################
     # SELECT * FROM WeatherData WHERE date >= addtime(now(), '-7 00:00:00')
+    # fetch the data from the database - in 1 hour buckets over one week
     query = 'from(bucket:"weather")\
     |> range(start: -7d)\
     |> filter(fn:(r) => r._measurement == "observation")\
-    |> aggregateWindow(every: 1h, fn: mean)'
+    |> aggregateWindow(every: 15m, fn: mean)'
 
     tables = query_api.query(org=org, query=query)
 
-    # build the structure to collect the data
+    # aggregateWindow will generate a table for each measurement in the database
+    # create a dictionary of the fields of interest and the name of the generated array
     name_remap = {
         'temperature': 'temperatures',
         'pressure': 'pressures',
-        'humidity': 'humidities',
-        'rainfall': 'rainfalls',
+        'rainfall': 'rainfalls',    # FIXME - rainfall need to be sum, not mean
         'battery': 'batteries'
     }
+
+    # scan through the returned tables, selecting the ones of interest
+    # we will crate a separate array for the timestamps
     data = {'dates': []}
     table_subset = []
+    # scan through the tables
     for table in tables:
+        # check if the table is for a measurement of interest
         field = table.records[0].get_field()
         if field in name_remap:
+            # if it is, add the table to the subset list
             table_subset.append(table)
+            # and add the remapped field name to the output data dictionary
             data[name_remap[field]] = []
 
+    # process each row in the tables in parallel
     for rows in zip(*table_subset):
+        # get the timestamp from one of the tables (they should all be the same)
         row_timestamp = rows[0].get_time()
         data['dates'].append(row_timestamp.astimezone().strftime("%Y-%m-%d %H:%M:%S"))
         for row in rows:
+            # step through each table and add the row data to the output data
             data[name_remap[row.get_field()]].append(row.get_value())
             if row.get_time() != row_timestamp:
                 breakpoint()
