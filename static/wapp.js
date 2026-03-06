@@ -14,26 +14,36 @@ async function weekly_refresh() {
     setTimeout(weekly_refresh, 3600*1000);
     updateHistoryUI();
 }
+    // metric to imperial unit conversion
+function c2f(c) {
+    return(32+c*1.8)
+}
+function mm2in(mm) {
+    return(mm/25.4)
+}
+function mps2mph(mps) {
+    return(mps*2.237)
+}
     // view (kind of)
 function updateUI() {
     if (!data) return;
 
         // update text information
     document.getElementById("date").innerHTML = data.date;
-    document.getElementById("temperature").innerHTML = (32+data.temperature*1.8).toFixed(1);
-    document.getElementById("temp_low").innerHTML = (32+data.min_temp*1.8).toFixed(1);
-    document.getElementById("temp_hi").innerHTML = (32+data.max_temp*1.8).toFixed(1);
+    document.getElementById("temperature").innerHTML = c2f(data.temperature).toFixed(1);
+    document.getElementById("temp_low").innerHTML = c2f(data.min_temp).toFixed(1);
+    document.getElementById("temp_hi").innerHTML = c2f(data.max_temp).toFixed(1);
     document.getElementById("pressure").innerHTML = data.pressure.toFixed(2);
     document.getElementById("humidity").innerHTML = data.humidity.toFixed(0);
-    document.getElementById("rainfall").innerHTML = data.rainfall.toFixed(2);
-    document.getElementById("windspeed").innerHTML = data.windspeed.toFixed(0);
-    document.getElementById("wind5max").innerHTML = data.wind5max.toFixed(0);
+    document.getElementById("rainfall").innerHTML = mm2in(data.rainfall).toFixed(2);
+    document.getElementById("windspeed").innerHTML = mps2mph(data.windspeed).toFixed(0);
+    document.getElementById("wind5max").innerHTML = mps2mph(data.wind5max).toFixed(0);
     document.getElementById("direction").innerHTML = data.direction.toFixed(0);
     document.getElementById("battery").innerHTML = data.battery.toFixed(3);
     document.getElementById("rssi").innerHTML = data.rssi.toFixed(1);
 
         // update guages
-    gaugeUpdate('temperature', (32+data.temperature*1.8).toFixed(0));
+    gaugeUpdate('temperature', c2f(data.temperature).toFixed(0));
     gaugeUpdate('humidity', data.humidity.toFixed(0));
     gaugeUpdate('pressure', data.pressure.toFixed(0));
     gaugeUpdate('windspeed', data.windspeed.toFixed(0));
@@ -63,7 +73,7 @@ function updateHistoryUI() {
         var jsDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2].substr(0,2),timeParts[0],timeParts[1],timeParts[2]);
         history.battery.data.addRows([[jsDate, weekData.batteries[i]]]);
         history.pressure.data.addRows([[jsDate, weekData.pressures[i]]]);
-        history.temperature.data.addRows([[jsDate, weekData.temperatures[i]*1.8+32]]);
+        history.temperature.data.addRows([[jsDate, c2f(weekData.temperatures[i])]]);
         rainfallSum += weekData.rainfalls[i];
         if (weekData.rainfalls[i]!=0) {
             if (lastRain) {
@@ -75,7 +85,7 @@ function updateHistoryUI() {
             rainfallRate = 0;
             lastRain = null;
         }
-        history.rainfall.data.addRows([[jsDate, rainfallSum, rainfallRate]]);
+        history.rainfall.data.addRows([[jsDate, mm2in(rainfallSum), mm2in(rainfallRate)]]);
     }
     history.battery.chart.draw(history.battery.data, history.battery.options);
     history.pressure.chart.draw(history.pressure.data, history.pressure.options);
