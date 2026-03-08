@@ -155,7 +155,6 @@ def week_data2(measurement):
     data = []
     for record in tables[0]:
         measurement_timestamp = record.get_time()
-        measurement_field = record.get_field()
         measurement_value = record.get_value()
         data.append([measurement_timestamp.astimezone().strftime("%Y-%m-%dT%H:%M"), measurement_value])
     return data
