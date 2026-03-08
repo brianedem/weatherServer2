@@ -40,10 +40,6 @@ app = Flask(__name__)
 def index():
     return send_file('static/index.html')
 
-@app.route('/debug.html')   # this was added to debug a new version of wapp.js
-def index2():
-    return send_file('static/debug.html')
-
 @app.route("/weather.data")
 def current_weather():
     ############## /weather.data #################################
@@ -161,7 +157,7 @@ def week_data2(measurement):
         measurement_timestamp = record.get_time()
         measurement_field = record.get_field()
         measurement_value = record.get_value()
-        data.append([measurement_timestamp.astimezone().strftime("%Y-%m-%d %H:%M:%S"), measurement_value])
+        data.append([measurement_timestamp.astimezone().strftime("%Y-%m-%dT%H:%M"), measurement_value])
     return data
 
 @app.route("/week.data")

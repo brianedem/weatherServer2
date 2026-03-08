@@ -1,6 +1,6 @@
     // Model
 let data = null;
-let weekData = null;
+const weekData = new Map()
 
 async function weather_refresh() {
     let response = await fetch('weather.data');
@@ -8,9 +8,12 @@ async function weather_refresh() {
     setTimeout(weather_refresh, 5000);
     updateUI();
 }
+const charts = [ "temperature", "pressure", "rainfall", "battery" ];
 async function weekly_refresh() {
-    let response = await fetch('week.data');
-    weekData = await response.json();
+    for (const chart of charts) {
+        let response = await fetch('week.'+chart);
+        weekData.set(chart, await response.json());
+    }
     setTimeout(weekly_refresh, 3600*1000);
     updateHistoryUI();
 }
@@ -51,46 +54,46 @@ function updateUI() {
 }
 
 function updateHistoryUI() {
-    if (!weekData) return;
-
-        // remove existing data - we need to overwrite old data
-    if (history.battery.data.getNumberOfRows() > 0) {
-        // console.log("removing rows", history.battery.data.getNumberOfRows());
-        history.battery.data.removeRows(0, history.battery.data.getNumberOfRows());
-        // console.log(history.battery.data.getNumberOfRows());
-        history.pressure.data.removeRows(0, history.pressure.data.getNumberOfRows());
-        history.temperature.data.removeRows(0, history.temperature.data.getNumberOfRows());
-        history.rainfall.data.removeRows(0, history.rainfall.data.getNumberOfRows());
-    }
+    if (weekData.size==0) return;
 
         // update historical charts
     var rainfallSum = 0;
     var rainfallRate = 0;
     var lastRain = null;
-    for (var i=0; i<weekData.dates.length; i++) {
-        var dateParts = weekData.dates[i].split("-");
-        var timeParts = dateParts[2].substr(3).split(":");
-        var jsDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2].substr(0,2),timeParts[0],timeParts[1],timeParts[2]);
-        history.battery.data.addRows([[jsDate, weekData.batteries[i]]]);
-        history.pressure.data.addRows([[jsDate, weekData.pressures[i]]]);
-        history.temperature.data.addRows([[jsDate, c2f(weekData.temperatures[i])]]);
-        rainfallSum += weekData.rainfalls[i];
-        if (weekData.rainfalls[i]!=0) {
-            if (lastRain) {
-                rainfallRate = weekData.rainfalls[i]/(jsDate - lastRain)*1000*60*60;
+
+    // process each chart in turn
+    for ([measurement,values] of weekData) {
+
+        // remove existing data from dataTable
+        existing_row_count = history[measurement].data.getNumberOfRows();
+        if (existing_row_count  > 0) {
+            history[measurement].data.removeRows(0, existing_row_count);
+        }
+
+        // convert data from server to required format and populate dataTable
+        for (value of values) {
+            // server provides a ISO timestamp local to the weather station (no offset)
+            var jsDate = new Date(value[0]);
+            if (measurement == 'rainfall') {
+                rainfallSum += value[1]
+                if (value[1]!=0) {
+                    if (lastRain) {
+                        rainfallRate = value[1]/(jsDate - lastRain)*1000*60*60;
+                    }
+                    lastRain = jsDate;
+                }
+                if (lastRain && (jsDate-lastRain)>(1000*60*60)) {
+                    rainfallRate = 0;
+                    lastRain = null;
+                }
+                history[measurement].data.addRows([[jsDate, mm2in(rainfallSum), mm2in(rainfallRate)]]);
             }
-            lastRain = jsDate;
+            else {
+                history[measurement].data.addRows([[jsDate, value[1]]]);
+            }
         }
-        if (lastRain && (jsDate-lastRain)>(1000*60*60)) {
-            rainfallRate = 0;
-            lastRain = null;
-        }
-        history.rainfall.data.addRows([[jsDate, mm2in(rainfallSum), mm2in(rainfallRate)]]);
+        history[measurement].chart.draw(history[measurement].data, history[measurement].options);
     }
-    history.battery.chart.draw(history.battery.data, history.battery.options);
-    history.pressure.chart.draw(history.pressure.data, history.pressure.options);
-    history.temperature.chart.draw(history.temperature.data, history.temperature.options);
-    history.rainfall.chart.draw(history.rainfall.data, history.rainfall.options);
 }
     // main code
 var gauges = new Object;
@@ -213,8 +216,8 @@ function drawChart() {
         // rainfall history
     var data = new google.visualization.DataTable();
     data.addColumn('datetime', 'Date');
-    data.addColumn('number', 'Rainfall');
     data.addColumn('number', 'Rate');
+    data.addColumn('number', 'Rainfall');   // this will be drawn on top of rate
     var options = {
         width: 800, height:200,
         chartArea: {
@@ -226,9 +229,11 @@ function drawChart() {
             textPosition: 'none'
         },
         trendlines: {
-            1: {        // rate overwrites rainfall - make less significant
-                lineWidth: 1,   // default is 2
-                opacity: 0.5    // default is 1.0 (opaque)
+            0: {
+                color: 'red'
+            },
+            1: {                // we want rainfall to be the same color as the other charts
+                color: 'blue'
             }
         },
         hAxis: {
