@@ -1,0 +1,7 @@
+.venv/
+.ini
+
+*.pyc
+__pycache__/
+
+*.swp
