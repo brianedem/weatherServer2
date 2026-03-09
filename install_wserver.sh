@@ -95,7 +95,7 @@ User=${SERVICE_USER}
 Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
 Environment="PATH=${INSTALL_DIR}/venv/bin"
-ExecStart=${INSTALL_DIR}/venv/bin/flask run --host=0.0.0.0
+ExecStart=${INSTALL_DIR}/venv/bin/gunicorn app:app --bind=0.0.0.0:8080
 Restart=always
 RestartSec=10
 
